@@ -14,7 +14,7 @@ exports.signup = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
   const name = req.body.name;
-  const roleId = req.body.roleId;
+  const role = req.body.role;
 
   bcrypt
     .hash(password, 12)
@@ -23,7 +23,7 @@ exports.signup = (req, res, next) => {
         email: email,
         password: hashedPassword,
         name: name,
-        role: roleId,
+        role: role,
       });
       return user.save();
     })
@@ -61,24 +61,21 @@ exports.login = (req, res, next) => {
         error.statusCode = 401;
         throw error;
       }
-      User.findOneAndUpdate({email: loadedUser.email},{loginAt: new Date()})
-      .then((update) => {
-        const token = jwt.sign(
-          {
-            email: loadedUser.email,
-            userId: loadedUser._id.toString(),
-          },
-          "supersecret",
-          { expiresIn: "1h" }
-        );
-        res.status(200).json({
-          token: token,
-          userId: loadedUser._id.toString(),
+      const token = jwt.sign(
+        {
           email: loadedUser.email,
-          lastLoginAt: loadedUser.loginAt,
-          role: loadedUser.role.role,
-        });
-      })
+          userId: loadedUser._id.toString(),
+        },
+        "supersecret",
+        { expiresIn: "1h" }
+      );
+      res.status(200).json({
+        token: token,
+        userId: loadedUser._id.toString(),
+        email: loadedUser.email,
+        lastLoginAt: loadedUser.loginAt,
+        role: loadedUser.role,
+      });
     })
     .catch((err) => {
       if (!err.statusCode) {
@@ -86,6 +83,7 @@ exports.login = (req, res, next) => {
       }
       next(err);
     });
+  User.findOneAndUpdate({ email: loadedUser.email }, { loginAt: new Date() });
 };
 
 exports.token = (req, res, next) => {
